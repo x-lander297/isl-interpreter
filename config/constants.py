@@ -45,6 +45,10 @@ STATIC_LABELS_PATH: Path = DATA_PROCESSED / "static_labels.npy"
 X_COMBINED_PATH: Path = DATA_PROCESSED / "X_combined.npy"
 Y_COMBINED_PATH: Path = DATA_PROCESSED / "y_combined.npy"
 
+# Aliases for P3's merge_data.py (it looks for these specific names)
+STATIC_LANDMARKS_NPY_PATH: Path = STATIC_LANDMARKS_PATH
+STATIC_LABELS_NPY_PATH: Path = STATIC_LABELS_PATH
+
 # Aliases for P3's files
 COMBINED_DATASET_PATH: Path = X_COMBINED_PATH
 LABELS_PATH: Path = STATIC_LABELS_PATH
