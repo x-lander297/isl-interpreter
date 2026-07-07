@@ -9,7 +9,7 @@ Dependencies: cv2, numpy, tqdm, config.constants
 """
 
 import logging
-import os
+from pathlib import Path
 from typing import Optional, Tuple
 
 import cv2
@@ -17,7 +17,6 @@ import numpy as np
 from tqdm import tqdm
 
 from config import constants
-
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -34,7 +33,9 @@ _VALID_EXTENSIONS: Tuple[str, ...] = (".png", ".jpg", ".jpeg")
 _TARGET_SIZE: Tuple[int, int] = (224, 224)
 
 
-def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.ndarray]:
+def load_static_images(
+    data_dir: Optional[Path] = None
+) -> Tuple[np.ndarray, np.ndarray]:
     """Load all static ISL images from class-labeled subfolders into memory.
 
     Scans `data_dir` for subfolders named after known class labels (as
@@ -43,9 +44,9 @@ def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.n
     and returns the full dataset as parallel NumPy arrays.
 
     Args:
-        data_dir (Optional[str]): Path to the root folder containing class
+        data_dir (Optional[Path]): Path to the root folder containing class
             subfolders (e.g., 'A', 'B', ..., '1', '2', ...). If None,
-            defaults to `constants.DATA_RAW_STATIC`.
+            defaults to `constants.DATA_DIR / "raw" / "static"`.
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
@@ -58,9 +59,12 @@ def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.n
         FileNotFoundError: If `data_dir` does not exist.
         ValueError: If no valid images were found across all class folders.
     """
-    root_dir = data_dir if data_dir is not None else constants.DATA_RAW_STATIC
+    if data_dir is None:
+        root_dir: Path = constants.DATA_DIR / "raw" / "static"
+    else:
+        root_dir = data_dir
 
-    if not os.path.isdir(root_dir):
+    if not root_dir.exists():
         raise FileNotFoundError(
             f"Static dataset directory not found: '{root_dir}'. "
             f"Expected subfolders named after class labels "
@@ -76,9 +80,9 @@ def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.n
     )
 
     for label_name, label_idx in sorted_labels:
-        class_dir = os.path.join(root_dir, label_name)
+        class_dir = root_dir / label_name
 
-        if not os.path.isdir(class_dir):
+        if not class_dir.exists():
             logger.warning(
                 "Class folder missing, skipping: '%s' (label='%s', index=%d)",
                 class_dir,
@@ -87,9 +91,9 @@ def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.n
             )
             continue
 
-        all_files = os.listdir(class_dir)
         image_files = [
-            f for f in all_files if f.lower().endswith(_VALID_EXTENSIONS)
+            f for f in class_dir.iterdir()
+            if f.suffix.lower() in _VALID_EXTENSIONS
         ]
 
         if not image_files:
@@ -100,9 +104,8 @@ def load_static_images(data_dir: Optional[str] = None) -> Tuple[np.ndarray, np.n
 
         classes_found += 1
 
-        for filename in tqdm(image_files, desc=f"Loading {label_name}"):
-            file_path = os.path.join(class_dir, filename)
-            img = cv2.imread(file_path)
+        for file_path in tqdm(image_files, desc=f"Loading {label_name}"):
+            img = cv2.imread(str(file_path))
 
             if img is None:
                 logger.warning(

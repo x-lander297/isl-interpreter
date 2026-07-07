@@ -18,11 +18,22 @@ import mediapipe as mp
 
 from config import constants
 
-
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    _handler = logging.StreamHandler()
+    _formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    _handler.setFormatter(_formatter)
+    logger.addHandler(_handler)
+    logger.propagate = False
+
+# MediaPipe detection confidence (separate from classifier confidence)
+_HAND_DETECTION_CONFIDENCE: float = 0.7
 
 _EXPECTED_FEATURE_DIM: int = (
-    constants.NUM_HAND_LANDMARKS * constants.COORDS_PER_LANDMARK
+    constants.MEDIAPIPE_LANDMARK_COUNT * constants.COORDINATES_PER_LANDMARK
 )
 
 try:
@@ -30,12 +41,12 @@ try:
     _hands = _mp_hands_solution.Hands(
         static_image_mode=True,
         max_num_hands=1,
-        min_detection_confidence=constants.CONFIDENCE_THRESHOLD,
+        min_detection_confidence=_HAND_DETECTION_CONFIDENCE,
     )
     logger.info(
         "MediaPipe Hands initialized (static_image_mode=True, "
         "max_num_hands=1, min_detection_confidence=%.2f).",
-        constants.CONFIDENCE_THRESHOLD,
+        _HAND_DETECTION_CONFIDENCE,
     )
 except Exception as exc:
     logger.error("Failed to initialize MediaPipe Hands: %s", exc)
@@ -82,7 +93,7 @@ def get_landmarks_from_image(img_rgb: np.ndarray) -> Optional[np.ndarray]:
 
     features = np.empty(_EXPECTED_FEATURE_DIM, dtype=np.float32)
     for idx, landmark in enumerate(hand_landmarks.landmark):
-        offset = idx * constants.COORDS_PER_LANDMARK
+        offset = idx * constants.COORDINATES_PER_LANDMARK
         features[offset] = landmark.x
         features[offset + 1] = landmark.y
         features[offset + 2] = landmark.z
