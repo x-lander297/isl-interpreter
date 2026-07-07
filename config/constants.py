@@ -3,15 +3,10 @@ Module: config.constants
 
 Purpose:
     Central, read-only configuration for the ISL Interpreter project.
-    Every other module (data loading, feature extraction, training,
-    inference) must import its constants from here.
+    This is a MERGED version that supports both P1's and P3's naming
+    conventions via aliases.
 
-    This is a MERGED version:
-        - P1's simple os.path style preserved for compatibility.
-        - P3's additional constants (audio, camera, smoothing, dynamic)
-          included so their files work without modification.
-
-Owner: P1 + P3 (shared ownership)
+Owner: P1 + P3
 Dependencies: None (standard library only)
 """
 
@@ -33,7 +28,12 @@ STATIC_FEATURE_DIM: int = NUM_HAND_LANDMARKS * COORDS_PER_LANDMARK  # 63
 DYNAMIC_FEATURE_DIM: int = STATIC_FEATURE_DIM * 2                   # 126
 INPUT_DIM: int = DYNAMIC_FEATURE_DIM                                # 126
 
-# Alias for P3's files (same as INPUT_DIM)
+# --- Aliases for P1's extractor.py, loader.py, and static_pipeline.py ---
+MEDIAPIPE_LANDMARK_COUNT: int = NUM_HAND_LANDMARKS
+COORDINATES_PER_LANDMARK: int = COORDS_PER_LANDMARK
+SINGLE_HAND_VECTOR_SIZE: int = STATIC_FEATURE_DIM   # 63
+
+# --- Alias for P3's files (they may expect FEATURE_VECTOR_SIZE) ---
 FEATURE_VECTOR_SIZE: int = INPUT_DIM
 
 
@@ -49,7 +49,7 @@ LABEL_NAME_TO_INDEX: dict = {name: i for i, name in LABEL_INDEX_TO_NAME.items()}
 
 
 # ---------------------------------------------------------------------------
-# 3. XGBoost hyperparameters (P1's version, used by train.py)
+# 3. XGBoost hyperparameters
 # ---------------------------------------------------------------------------
 XGB_PARAMS: dict = {
     'n_estimators': 150,
@@ -63,7 +63,7 @@ XGB_PARAMS: dict = {
     'n_jobs': -1,
 }
 
-# P3's DEFAULT_XGBOOST_PARAMS alias for compatibility
+# Alias for P3's files (they may expect DEFAULT_XGBOOST_PARAMS)
 DEFAULT_XGBOOST_PARAMS: dict = XGB_PARAMS
 
 
@@ -81,9 +81,9 @@ STATIC_LABELS_PATH: str = os.path.join(DATA_PROCESSED, 'static_labels.npy')
 X_COMBINED_PATH: str = os.path.join(DATA_PROCESSED, 'X_combined.npy')
 Y_COMBINED_PATH: str = os.path.join(DATA_PROCESSED, 'y_combined.npy')
 
-# Aliases for P3's files (they expect these names)
-COMBINED_DATASET_PATH: str = X_COMBINED_PATH   # for merge_data.py
-LABELS_PATH: str = STATIC_LABELS_PATH          # for loader
+# Aliases for P3's files (they may expect these names)
+COMBINED_DATASET_PATH: str = X_COMBINED_PATH
+LABELS_PATH: str = STATIC_LABELS_PATH
 
 # Model paths (for train.py and predict.py)
 XGBOOST_MODEL_PATH: str = os.path.join(MODELS_DIR, 'xgb_model.pkl')
@@ -111,10 +111,8 @@ CAMERA_INDEX: int = 0
 FRAME_WIDTH: int = 640
 FRAME_HEIGHT: int = 480
 MAX_READ_RETRIES: int = 3
-PREDICTION_BUFFER_SIZE: int = 5   # P3's smoothing buffer size
-
-# Aliases for P3's files (same as PREDICTION_BUFFER_SIZE)
-BUFFER_SIZE: int = PREDICTION_BUFFER_SIZE
+PREDICTION_BUFFER_SIZE: int = 5
+BUFFER_SIZE: int = PREDICTION_BUFFER_SIZE   # Alias for P1's name
 
 
 # ---------------------------------------------------------------------------
