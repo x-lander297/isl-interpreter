@@ -1,0 +1,18 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Data & Models (large files)
+data/processed/*.npy
+models/*.pkl
+!models/dummy_model.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
