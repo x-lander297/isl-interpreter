@@ -34,7 +34,8 @@ DATA_DIR: Path = ROOT_DIR / "data"
 DATA_RAW_STATIC: Path = DATA_DIR / "raw" / "static"
 DATA_RAW_DYNAMIC: Path = DATA_DIR / "raw" / "dynamic"
 DATA_PROCESSED: Path = DATA_DIR / "processed"
-
+# Alias for P3's merge_data.py (points to the processed folder)
+DATA_STATIC = DATA_PROCESSED
 
 # ---------------------------------------------------------------------------
 # 2. Processed file paths (used by loader, extractor, merge_data, train)
