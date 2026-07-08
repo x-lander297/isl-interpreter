@@ -190,11 +190,28 @@ class SignPredictor:
             logger.error("Failed to decode predicted labels: %s", exc)
             raise RuntimeError("Failed to decode predicted labels") from exc
 
+    def get_label_name(self, idx: int) -> str:
+        """
+        Convert a class index to a human-readable label.
+
+        Args:
+            idx: Integer class index.
+
+        Returns:
+            The corresponding character label (e.g. 'A', '7').
+
+        Raises:
+            ValueError: If the index is out of range.
+        """
+        if idx < 0 or idx >= len(self.label_encoder.classes_):
+            raise ValueError(f"Index {idx} out of range for label encoder")
+        return self._decode_labels(np.array([idx]))[0]
+
     def predict(
         self,
         landmarks: Union[List[float], np.ndarray],
         return_confidence: bool = False,
-    ) -> Union[str, Tuple[str, float]]:
+    ) -> Union[int, Tuple[int, float]]:
         """
         Predict the sign class for a single landmark sample.
 
@@ -204,7 +221,7 @@ class SignPredictor:
                 confidence (max class probability).
 
         Returns:
-            The predicted character, or a (character, confidence) tuple
+            The predicted class index (integer), or a (index, confidence) tuple
             if `return_confidence` is True.
 
         Raises:
@@ -225,10 +242,11 @@ class SignPredictor:
             logger.error("Prediction failed: %s", exc)
             raise RuntimeError("XGBoost prediction failed") from exc
 
-        label = self._decode_labels(np.array([pred_index]))[0]
+        # Log the decoded label for human readability (debug only)
+        label = self.get_label_name(pred_index)
 
         if confidence is not None:
-            logger.debug("Predicted '%s' with confidence %.4f", label, confidence)
+            logger.debug("Predicted '%s' (index %d) with confidence %.4f", label, pred_index, confidence)
             if confidence < LOW_CONFIDENCE_THRESHOLD:
                 logger.warning(
                     "Low confidence prediction: '%s' (%.4f) below threshold %.2f",
@@ -236,16 +254,16 @@ class SignPredictor:
                     confidence,
                     LOW_CONFIDENCE_THRESHOLD,
                 )
-            return label, confidence
+            return pred_index, confidence
 
-        logger.debug("Predicted '%s'", label)
-        return label
+        logger.debug("Predicted '%s' (index %d)", label, pred_index)
+        return pred_index
 
     def predict_batch(
         self,
         landmarks_batch: Union[List[List[float]], np.ndarray],
         return_confidence: bool = False,
-    ) -> Union[List[str], Tuple[List[str], List[float]]]:
+    ) -> Union[List[int], Tuple[List[int], List[float]]]:
         """
         Predict sign classes for a batch of landmark samples.
 
@@ -255,7 +273,7 @@ class SignPredictor:
             return_confidence: If True, also return per-sample confidences.
 
         Returns:
-            A list of predicted characters, or a (labels, confidences)
+            A list of predicted class indices, or a (indices, confidences)
             tuple if `return_confidence` is True.
 
         Raises:
@@ -276,11 +294,12 @@ class SignPredictor:
             logger.error("Batch prediction failed: %s", exc)
             raise RuntimeError("XGBoost batch prediction failed") from exc
 
-        labels = self._decode_labels(pred_indices)
+        indices = [int(i) for i in pred_indices]
 
         if confidences is not None:
-            for label, confidence in zip(labels, confidences):
-                logger.debug("Predicted '%s' with confidence %.4f", label, confidence)
+            for idx, confidence in zip(indices, confidences):
+                label = self.get_label_name(idx)
+                logger.debug("Predicted '%s' (index %d) with confidence %.4f", label, idx, confidence)
                 if confidence < LOW_CONFIDENCE_THRESHOLD:
                     logger.warning(
                         "Low confidence prediction: '%s' (%.4f) below threshold %.2f",
@@ -288,11 +307,11 @@ class SignPredictor:
                         confidence,
                         LOW_CONFIDENCE_THRESHOLD,
                     )
-            logger.debug("Batch prediction complete for %d samples", len(labels))
-            return labels, [float(c) for c in confidences]
+            logger.debug("Batch prediction complete for %d samples", len(indices))
+            return indices, [float(c) for c in confidences]
 
-        logger.debug("Batch prediction complete for %d samples", len(labels))
-        return labels
+        logger.debug("Batch prediction complete for %d samples", len(indices))
+        return indices
 
     def predict_proba(self, landmarks: Union[List[float], np.ndarray]) -> np.ndarray:
         """
