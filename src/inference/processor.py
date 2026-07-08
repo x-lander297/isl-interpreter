@@ -2,9 +2,10 @@
 processor.py
 
 Frame processing pipeline for the Indian Sign Language interpreter
-project. Wraps MediaPipe Hands to extract hand landmarks from RGB
-frames, maintains a rolling buffer of raw predictions, and produces a
-temporally-smoothed "stable" prediction via majority voting.
+project. Wraps MediaPipe Hands to extract hand landmarks from BGR
+frames (automatically converted to RGB), maintains a rolling buffer of
+raw predictions, and produces a temporally-smoothed "stable" prediction
+via majority voting.
 
 Note: This module does not perform actual sign classification. The
 `raw_prediction` value is a placeholder (always 0) until a trained
@@ -15,6 +16,7 @@ import logging
 from collections import deque
 from typing import Any, Dict, Optional
 
+import cv2
 import mediapipe as mp
 import numpy as np
 
@@ -110,9 +112,9 @@ class FrameProcessor:
             self.max_hands,
         )
 
-    def process_frame(self, frame: np.ndarray) -> Optional[Dict[str, Any]]:
+    def process_frame(self, frame: np.ndarray, flip: bool = True) -> Optional[Dict[str, Any]]:
         """
-        Process a single RGB frame through the hand detection pipeline.
+        Process a single BGR frame through the hand detection pipeline.
 
         Runs MediaPipe hand detection on the frame, extracts hand
         landmarks (if any), updates the internal prediction buffer
@@ -122,8 +124,11 @@ class FrameProcessor:
         Parameters
         ----------
         frame : np.ndarray
-            An RGB frame of shape (height, width, 3) with dtype
-            uint8.
+            A BGR frame of shape (height, width, 3) with dtype uint8
+            (as returned by OpenCV).
+        flip : bool, optional
+            Whether to mirror the frame horizontally for a natural
+            view. Defaults to True.
 
         Returns
         -------
@@ -148,14 +153,28 @@ class FrameProcessor:
 
         self.frame_counter += 1
 
+        # -------- PRE-PROCESSING: flip and convert BGR to RGB --------
         try:
-            results = self.hands.process(frame)
-        except Exception as exc:  # noqa: BLE001
+            # Mirror horizontally for a natural selfie view
+            if flip:
+                frame = cv2.flip(frame, 1)
+
+            # MediaPipe expects RGB, but OpenCV gives BGR
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        except Exception as exc:
+            logger.error("Frame preprocessing failed: %s", exc)
+            return None
+
+        # -------- MEDIAPIPE INFERENCE --------
+        try:
+            results = self.hands.process(rgb_frame)
+        except Exception as exc:
             logger.error("MediaPipe processing error: %s", exc)
             return None
 
+        # -------- HANDLE RESULT --------
         if results is None or not getattr(results, "multi_hand_landmarks", None):
-            self._update_buffer(0)
+            self._update_buffer(0)  # placeholder raw prediction
             stable_prediction = self._get_stable_prediction()
             return {
                 "landmarks": None,
@@ -223,7 +242,7 @@ class FrameProcessor:
 
             return landmarks_array
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Failed to extract landmarks: %s", exc)
             return None
 
@@ -243,8 +262,7 @@ class FrameProcessor:
         Compute a temporally-smoothed prediction from the buffer.
 
         Uses majority voting over the current contents of the
-        prediction buffer, breaking ties in favor of the most recent
-        prediction ("newest").
+        prediction buffer. If the buffer is empty or insufficient, None.
 
         Returns
         -------
@@ -256,18 +274,13 @@ class FrameProcessor:
             return None
 
         try:
-            return majority_vote(list(self.buffer), tie_breaker="newest")
+            return majority_vote(list(self.buffer))
         except ValueError as exc:
             logger.error("Failed to compute stable prediction: %s", exc)
             return None
 
     def reset(self) -> None:
-        """
-        Clear the internal prediction buffer.
-
-        Useful when starting a new gesture sequence or resetting
-        state between sessions.
-        """
+        """Clear the internal prediction buffer."""
         self.buffer.clear()
         logger.info("FrameProcessor buffer has been reset.")
 
