@@ -34,7 +34,8 @@ DATA_DIR: Path = ROOT_DIR / "data"
 DATA_RAW_STATIC: Path = DATA_DIR / "raw" / "static"
 DATA_RAW_DYNAMIC: Path = DATA_DIR / "raw" / "dynamic"
 DATA_PROCESSED: Path = DATA_DIR / "processed"
-
+# Alias for P3's merge_data.py (points to the processed folder)
+DATA_STATIC = DATA_PROCESSED
 
 # ---------------------------------------------------------------------------
 # 2. Processed file paths (used by loader, extractor, merge_data, train)
@@ -43,6 +44,10 @@ STATIC_LANDMARKS_PATH: Path = DATA_PROCESSED / "static_landmarks.npy"
 STATIC_LABELS_PATH: Path = DATA_PROCESSED / "static_labels.npy"
 X_COMBINED_PATH: Path = DATA_PROCESSED / "X_combined.npy"
 Y_COMBINED_PATH: Path = DATA_PROCESSED / "y_combined.npy"
+
+# Aliases for P3's merge_data.py (it looks for these specific names)
+STATIC_LANDMARKS_NPY_PATH: Path = STATIC_LANDMARKS_PATH
+STATIC_LABELS_NPY_PATH: Path = STATIC_LABELS_PATH
 
 # Aliases for P3's files
 COMBINED_DATASET_PATH: Path = X_COMBINED_PATH
