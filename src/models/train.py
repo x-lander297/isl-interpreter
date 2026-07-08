@@ -576,7 +576,7 @@ def save_model(
             f"Failed to save label encoder to: {encoder_out}"
         ) from exc
 
-
+'''
 def train_xgboost_model(
     processed_dir: str = str(DATA_PATH),
     model_path: str = str(MODEL_PATH),
@@ -661,6 +661,59 @@ def train_xgboost_model(
     logger.info("=== ISL XGBoost training pipeline: completed successfully ===")
     return {"model": model, "encoder": encoder, "metrics": metrics}
 
+'''
+def train_xgboost_model(
+    processed_dir: str = str(DATA_PATH),
+    model_path: str = str(MODEL_PATH),
+    encoder_path: str = str(ENCODER_PATH),
+    tune: bool = False,
+    plot_path: str = str(CONFUSION_MATRIX_PATH),
+) -> Dict[str, Any]:
+    """Run the full ISL static-gesture XGBoost training pipeline..."""
+    logger.info("=== ISL XGBoost training pipeline: starting ===")
+    logger.info("Processed data directory: %s", processed_dir)
+    logger.info("Model output path:        %s", model_path)
+    logger.info("Encoder output path:      %s", encoder_path)
+    logger.info("Confusion matrix path:    %s", plot_path)
+    logger.info("Hyperparameter tuning:    %s", tune)
+
+    X, y_raw = load_data(processed_dir)
+
+    # --- FIX: Fit encoder on class names from constants ---
+    try:
+        encoder = LabelEncoder()
+        encoder.fit(constants.STATIC_LABELS)   # <-- THIS IS THE CHANGE
+        y_encoded = y_raw.astype(np.int64)     # y_raw is already integer indices
+    except Exception as exc:
+        logger.error("Failed to fit LabelEncoder on labels: %s", exc)
+        raise TrainingError("Failed to fit LabelEncoder on target labels.") from exc
+
+    logger.info(
+        "LabelEncoder fitted: %d classes -> %s",
+        len(encoder.classes_),
+        list(encoder.classes_),
+    )
+
+    splits = split_data(X, y_encoded, test_size=TEST_SPLIT_RATIO, random_state=RANDOM_SEED)
+    X_train, X_test = splits["X_train"], splits["X_test"]
+    y_train, y_test = splits["y_train"], splits["y_test"]
+
+    if tune:
+        best_params = tune_hyperparameters(X_train, y_train, base_params=dict(XGB_PARAMS))
+        model = train_xgboost(X_train, y_train, params=best_params)
+    else:
+        model = train_xgboost(X_train, y_train, params=dict(XGB_PARAMS))
+
+    metrics = evaluate_model(model, X_test, y_test, label_encoder=encoder)
+
+    plot_confusion_matrix(
+        y_test, metrics["y_pred"], class_names=metrics["class_names"], save_path=plot_path
+    )
+
+    save_model(model, encoder, model_path=model_path, encoder_path=encoder_path)
+
+    logger.info("=== ISL XGBoost training pipeline: completed successfully ===")
+    return {"model": model, "encoder": encoder, "metrics": metrics}
 
 def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for the training script.
