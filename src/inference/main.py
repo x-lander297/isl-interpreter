@@ -153,6 +153,9 @@ class ISLInterpreterApp:
             return None
 
         smoothed_index = majority_vote(list(self.buffer))
+        if smoothed_index is None:
+            return None #no consensus yet
+        
         # Use the correct method of LabelMapper:
         # If your method is named differently (e.g. get_label),
         # change this line accordingly.
@@ -236,7 +239,7 @@ class ISLInterpreterApp:
                 frame = self._overlay_text(frame, label)
                 cv2.imshow("ISL Interpreter", frame)
 
-                key = cv2.waitKey(1) & 0xFF
+                key = cv2.waitKey(10) & 0xFF
                 if key == ord("q"):
                     logger.info("Quit key pressed. Shutting down.")
                     self.running = False
@@ -262,6 +265,7 @@ class ISLInterpreterApp:
             None.
         """
         self.camera.release()
+        self.audio.stop()
         cv2.destroyAllWindows()
         logger.info(
             "Application shut down. Total stable predictions made: %d.",

@@ -141,8 +141,8 @@ MUTE_DEFAULT: bool = False
 # 10. Camera settings
 # ---------------------------------------------------------------------------
 CAMERA_INDEX: int = 0
-FRAME_WIDTH: int = 640
-FRAME_HEIGHT: int = 480
+FRAME_WIDTH: int = 320
+FRAME_HEIGHT: int = 240
 MAX_READ_RETRIES: int = 3
 
 
