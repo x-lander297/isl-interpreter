@@ -84,7 +84,8 @@ FEATURE_VECTOR_SIZE: int = INPUT_DIM
 # ---------------------------------------------------------------------------
 # 5. Class labels (A–Z, 1–9)
 # ---------------------------------------------------------------------------
-STATIC_LABELS: list = [chr(ord('A') + i) for i in range(26)] + [str(i) for i in range(1, 10)]
+#STATIC_LABELS: list = [chr(ord('A') + i) for i in range(26)] + [str(i) for i in range(1, 10)]
+STATIC_LABELS: list = [str(i) for i in range(1, 10)] + [chr(ord('A') + i) for i in range(26)]
 NUM_STATIC_CLASSES: int = len(STATIC_LABELS)   # 35
 TOTAL_CLASSES: int = NUM_STATIC_CLASSES
 
